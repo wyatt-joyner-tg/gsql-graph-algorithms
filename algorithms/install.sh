@@ -276,6 +276,19 @@ while [ !$finished ]; do
                 done
         fi
 
+        # 6. Ask for vertex label attribute name. Replace *vertex-label* placeholder.
+        if [[ ${algoName} == knn_cosine* ]]; then
+                while true; do
+                        read -p "Vertex attribute that stores STRING label:"  label
+                        if [[ $(countVertexAttr $label) > 0 ]]; then
+                                sed -i "s/\*vertex-label\*/$label/g" ${genPath}/${algoName}_tmp.gsql
+                                break;
+                        else
+                                echo " *** Vertex attribute name not found. Try again."
+                        fi
+                done
+        fi
+
 : <<'END'
         # 6. Drop queries and subqueries in order
         gsql -g $grph "DROP QUERY ${algoName}"
