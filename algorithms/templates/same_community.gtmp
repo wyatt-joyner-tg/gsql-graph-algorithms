@@ -1,0 +1,23 @@
+*ATTR*CREATE QUERY same_community*EXT* (VERTEX source, INT topK) FOR GRAPH *graph* {
+*ACCM*CREATE QUERY same_community*EXT* (VERTEX source, INT topK) FOR GRAPH *graph* {
+*FILE*CREATE QUERY same_community*EXT* (VERTEX source, INT topK, FILE f) FOR GRAPH *graph* {
+        SumAccum<FLOAT> @score;
+
+        start = {*vertex-types*};
+        
+        results = SELECT s FROM start:s WHERE s != source
+            ACCUM
+                # replace communityId with user-provided attribute, similar to how cosine similarity asks for *edge-weight*
+                IF s.*community* == source.*community* THEN s.@score += 1 END
+            ORDER BY s.@score DESC
+            LIMIT topK;
+
+
+*ATTR*  results = SELECT s FROM results:s
+*ATTR*          POST-ACCUM INSERT INTO *insert-edge-name* values (source, s, s.@score);
+
+*ACCM*  PRINT results.@score;
+
+*FILE*  f.println("Vertex1", "Vertex2", "Preferential Attachment Score");
+*FILE*  results = SELECT s FROM results:s POST-ACCUM f.println(source, s, s.@score);
+}

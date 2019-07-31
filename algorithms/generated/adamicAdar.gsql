@@ -1,0 +1,20 @@
+CREATE QUERY adamicAdar (VERTEX source, INT topK) FOR GRAPH Test {
+        SumAccum<FLOAT> @score;
+        OrAccum @visited;
+
+        start = {source};
+        # 1 hop neighbors
+        N1 = SELECT n from start:s-()->: n
+            POST-ACCUM n.@visited += True;
+
+        # 2 hop neighbors
+        N2 = SELECT n from N1:s-()-> :n
+            WHERE n != source #AND n.@visited == False
+            ACCUM n.@score += 1/log(s.outdegree()) # natural log
+            ORDER BY n.@score DESC
+            LIMIT topK;
+
+
+        PRINT N2.@score;
+
+}

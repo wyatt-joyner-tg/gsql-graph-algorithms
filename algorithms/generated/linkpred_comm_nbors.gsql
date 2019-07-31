@@ -1,0 +1,23 @@
+CREATE QUERY linkpred_comm_nbors (VERTEX source, INT topK) FOR GRAPH SAH {
+        SumAccum<INT> @score;
+        OrAccum @visited;
+
+        MapAccum<VERTEX, INT> @@topK_result;        
+
+        start = {source};
+
+        # 1 hop neighbors. Want to exclude from result as well using @visited
+        N1 = SELECT n FROM start:s-((phone_made_call|phone_received_call))->:n
+            POST-ACCUM n.@visited += True;
+
+        # 2 hop neighbors
+        N2 = SELECT n FROM N1:s-((phone_made_call|phone_received_call))->:n
+            WHERE n != source AND n.@visited == False
+            ACCUM n.@score += 1
+            ORDER BY n.@score DESC
+            LIMIT topK;
+
+
+        PRINT N2.@score;
+
+}

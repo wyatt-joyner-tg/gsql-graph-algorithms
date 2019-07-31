@@ -1,20 +1,18 @@
-*ATTR*CREATE QUERY linkpred_comm_nbors*EXT* (VERTEX<*vertex-types*> source, INT topK) FOR GRAPH *graph* {
-*ACCM*CREATE QUERY linkpred_comm_nbors*EXT* (VERTEX source, INT topK) FOR GRAPH *graph* {
-*FILE*CREATE QUERY linkpred_comm_nbors*EXT* (VERTEX source, INT topK, FILE f) FOR GRAPH *graph* {
+*ATTR*CREATE QUERY common_neighbors*EXT* (VERTEX source, INT topK) FOR GRAPH *graph* {
+*ACCM*CREATE QUERY common_neighbors*EXT* (VERTEX source, INT topK) FOR GRAPH *graph* {
+*FILE*CREATE QUERY common_neighbors*EXT* (VERTEX source, INT topK, FILE f) FOR GRAPH *graph* {
         SumAccum<INT> @score;
-        OrAccum @visited;
 
 *ACCM*  MapAccum<VERTEX, INT> @@topK_result;        
 
         start = {source};
 
         # 1 hop neighbors. Want to exclude from result as well using @visited
-        N1 = SELECT n FROM start:s-(*edge-types*)->*vertex-types*:n
-            POST-ACCUM n.@visited += True;
+        N1 = SELECT n FROM start:s-(*edge-types*)->:n;
 
         # 2 hop neighbors
-        N2 = SELECT n FROM N1:s-(*edge-types*)->*vertex-types*:n
-            WHERE n != source AND n.@visited == False
+        N2 = SELECT n FROM N1:s-(*edge-types*)->:n
+            WHERE n != source
             ACCUM n.@score += 1
             ORDER BY n.@score DESC
             LIMIT topK;
