@@ -39,7 +39,7 @@ fi
 finished=false
 while [ !$finished ]; do
         echo; echo "Please enter the index of the algorithm you want to create or EXIT:"
-        select algo in "EXIT" "Closeness Centrality" "Connected Components" "Label Propagation" "Louvain Method with Parallelism and Refinement" "PageRank" "Weighted PageRank" "Personalized PageRank" "Shortest Path, Single-Source, No Weight" "Shortest Path, Single-Source, Positive Weight" "Shortest Path, Single-Source, Any Weight" "Minimal Spanning Tree (MST)" "Cycle Detection" "Triangle Counting(minimal memory)" "Triangle Counting(fast, more memory)" "Cosine Neighbor Similarity (single vertex)" "Cosine Neighbor Similarity (all vertices)" "Jaccard Neighbor Similarity (single vertex)" "Jaccard Neighbor Similarity (all vertices)" "k-Nearest Neighbors (Cosine Neighbor Similarity, single vertex)" "Common Neighbors"; do   # "Cosine Similarity (single vertex)" "Jaccard Similarity (single vertex)"   "k-Nearest Neighbors (Cosine Neighbor Similarity, batch)" "k-Nearest Neighbors Cross Validation (Cosine Neighbor Similarity)"
+        select algo in "EXIT" "Closeness Centrality" "Connected Components" "Label Propagation" "Louvain Method with Parallelism and Refinement" "PageRank" "Weighted PageRank" "Personalized PageRank" "Shortest Path, Single-Source, No Weight" "Shortest Path, Single-Source, Positive Weight" "Shortest Path, Single-Source, Any Weight" "Minimal Spanning Tree (MST)" "Cycle Detection" "Triangle Counting(minimal memory)" "Triangle Counting(fast, more memory)" "Cosine Neighbor Similarity (single vertex)" "Cosine Neighbor Similarity (all vertices)" "Jaccard Neighbor Similarity (single vertex)" "Jaccard Neighbor Similarity (all vertices)" "k-Nearest Neighbors (Cosine Neighbor Similarity, single vertex)" "Common Neighbors" "Adamic-Adar" "Preferential Attachment" "Resource Allocation"; do   # "Cosine Similarity (single vertex)" "Jaccard Similarity (single vertex)"   "k-Nearest Neighbors (Cosine Neighbor Similarity, batch)" "k-Nearest Neighbors Cross Validation (Cosine Neighbor Similarity)"
         case $algo in
                         "Closeness Centrality" )
                                 algoName="closeness_cent"
@@ -134,8 +134,20 @@ while [ !$finished ]; do
                        #         echo "  knn_cosine_cv() returns an estimated best choice of k in a range, based on cosine neighbor similarity"
                        #         break;;
                        'Common Neighbors' )
-                                algoName="linkpred_comm_nbors"
-                                echo "  linkpred_comm_nbors() calculates the number of common neighbors between one given vertex and all other vertices that are not its neighbors"
+                                algoName="common_neighbors"
+                                echo "  linkpred_comm_nbors() calculates the number of common neighbors between one given vertex and all other non-neighbor vertices, returning the top K vertices"
+                                break;;
+                        'Adamic-Adar' )
+                                algoName="adamicAdar"
+                                echo "  adamicAdar() calculates the Adamic-Adar score between one given vertex and all other non-neighbor vertices, returning the top K vertices"
+                                break;;
+                        'Preferential Attachment' )
+                                algoName="pref_attachment"
+                                echo "  pref_attachment() calculates the Preferential Attachment score between one given vertex and all other non-neighbor vertices, returning the top K vertices"
+                                break;;
+                        'Resource Allocation' )
+                                algoName="resource_alloc"
+                                echo "  resource_alloc() calculates the Resource Allocation score between one given vertex and all other non-neighbor vertices, returning the top K vertices"
                                 break;;
                         "EXIT" )
                                 finished=true
@@ -168,6 +180,7 @@ while [ !$finished ]; do
         echo
 
         # 3. Ask for vertex types. Replace *vertex-types* placeholder. For similarity algos, only take one vertex type.
+        # Note: this is only for the starting vertex set. However, depending on edges, the query may still traverse vertices of types that were not explicitly specified.
         read -p 'Vertex types: ' vts
         vts=${vts//[[:space:]]/}
         if [[ $algoName == *cosine* ]] || [[ $algoName == *jaccard* ]]; then 
@@ -663,3 +676,4 @@ case $doInstall in
                 ;;
         * )
                 exit;;
+esac
