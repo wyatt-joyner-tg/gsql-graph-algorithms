@@ -1,0 +1,30 @@
+USE GRAPH social
+DROP QUERY diameter
+DROP QUERY max_BFS_depth
+
+CREATE QUERY max_BFS_depth(VERTEX source, STRING e_type) FOR GRAPH social RETURNS (INT){
+        OrAccum @visited;
+        INT depth=-1;
+        start = {source};
+        WHILE start.size() > 0 DO
+          depth = depth + 1;
+          start = SELECT t
+                  FROM start:s -(e_type:e) ->:t
+                  WHERE NOT t.@visited
+                  ACCUM t.@visited = TRUE;
+        END;
+        RETURN depth;
+}
+
+CREATE QUERY diameter(INT k, STRING v_type, STRING e_type) FOR GRAPH social {
+        MaxAccum<INT> @@diameter;
+        start = {v_type.*};
+        start = SELECT s
+                FROM start:s
+                LIMIT k;
+        start = SELECT s
+                FROM start:s
+                ACCUM @@diameter += max_BFS_depth(s, e_type);
+        PRINT @@diameter;
+}
+
