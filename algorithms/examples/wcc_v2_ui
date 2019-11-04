@@ -1,0 +1,47 @@
+
+CREATE QUERY wcc_main () FOR GRAPH social {
+# This query identifies the Connected Components (undirected edges)
+
+        
+        MapAccum<INT, INT> @@compSizes;
+        INT n = 0;
+        INT curr_cid;
+        All = {Person.*};
+
+        WHILE (Unvisited.size() > 0) DO
+                Start = SELECT s
+                        FROM All:s
+                        WHERE s.cid == 0
+                        LIMIT 1;
+                Start = SELECT s
+                        FROM Start:s
+                        POST-ACCUM wcc_sub(s)
+                        ;
+        END;
+
+        Start = {Person.*};
+
+        Start = SELECT s FROM Start:s
+                POST-ACCUM @@compSizes += (s.cid -> 1);
+        PRINT @@compSizes;
+
+}
+
+create query wcc_sub (vertex input) for graph social {
+
+    SumAccum<INT> @cid;        //community id for each vertex
+
+    Start = {input};
+    
+    Start = select s from Start:s post-accum s.@cid = getvid(s);
+
+    WHILE (Start.size() > 0) DO
+      Start = SELECT t
+              FROM Start:s -(Coworker:e)-> Person:t
+              ACCUM t.@cid = s.@cid
+              POST-ACCUM CASE WHEN t.@cid != t.@cid' THEN t.cid = t.@cid END
+              HAVING t.@cid != t.@cid';
+    END;
+}
+
+#INSTALL QUERY conn_comp
