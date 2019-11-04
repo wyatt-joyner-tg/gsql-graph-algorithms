@@ -3,7 +3,6 @@ CREATE QUERY conn_comp () FOR GRAPH social {
 
         SumAccum<INT> @cid;        //community id for each vertex
         MapAccum<INT, INT> @@compSizes;
-        OrAccum @visited;
         INT n = 0;
         INT curr_cid;
         Unvisited = {Person.*};
@@ -20,7 +19,6 @@ CREATE QUERY conn_comp () FOR GRAPH social {
                         LIMIT 1;
                 Start = SELECT s
                         FROM Start:s
-                        ACCUM s.@visited = true
                         POST-ACCUM curr_cid = s.@cid
                         ;
                 WHILE (Start.size() > 0) DO
@@ -28,9 +26,7 @@ CREATE QUERY conn_comp () FOR GRAPH social {
                         @@compSizes += (curr_cid -> Start.size());
                         Start = SELECT t
                                 FROM Start:s -(Coworker:e)-> Person:t
-                                WHERE t.@visited == false
-                                ACCUM t.@cid = s.@cid,
-                                      t.@visited = true;
+                                ACCUM t.@cid = s.@cid;
                 END;
         END;
 
