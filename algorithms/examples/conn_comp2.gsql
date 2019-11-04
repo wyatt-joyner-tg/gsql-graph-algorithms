@@ -26,7 +26,8 @@ CREATE QUERY conn_comp () FOR GRAPH social {
                         @@compSizes += (curr_cid -> Start.size());
                         Start = SELECT t
                                 FROM Start:s -(Coworker:e)-> Person:t
-                                ACCUM t.@cid = s.@cid;
+                                ACCUM t.@cid = s.@cid
+                                HAVING t.@cid != t.@cid';
                 END;
         END;
 
