@@ -53,6 +53,8 @@ CREATE QUERY label_prop_split (INT maxIter, int k) FOR GRAPH social {
                tmp = SELECT s FROM Start:s WHERE s.@label = s.@lable_new;
         END; // end WHILE
       END; // end FOREACH
+      
+      Start = SELECT s FROM All:s POST-ACCUM s.label = s.@label;
 }
 
 #INSTALL QUERY label_prop
