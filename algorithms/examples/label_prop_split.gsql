@@ -14,7 +14,9 @@ CREATE QUERY label_prop_split (INT maxIter, int k, int hub) FOR GRAPH social {
         FOREACH ccid in @@cc_set DO
         
           # Assign unique labels to each vertex
-          Start = SELECT s FROM All:s WHERE s.cc_id == ccid ACCUM s.@label = getvid(s);
+          Start = SELECT s FROM All:s 
+                  WHERE s.cc_id == ccid and s.outdegree() < hub 
+                  ACCUM s.@label = getvid(s);
 
           # Propagate labels to neighbors until labels converge or the max iterations is reached
           WHILE @@changed == true LIMIT maxIter DO
