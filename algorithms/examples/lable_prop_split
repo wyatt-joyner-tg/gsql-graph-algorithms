@@ -1,0 +1,58 @@
+CREATE QUERY label_prop_split (INT maxIter, int k) FOR GRAPH social {
+# Partition the vertices into communities, according to the Label Propagation method.
+# Indicate community membership by assigning each vertex a community ID.
+
+        OrAccum @@changed = true, @is_start;
+        MapAccum<int, int> @map; 
+        SumAccum<int> @label, @label_new, @num;    
+        SetAccum<int> @@cc_set;
+        
+        All = {ANY};
+        
+        Start = SELECT s FROM All:s POST-ACCUM @@cc_set += s.ccid;
+        
+        FOREACH ccid in @@cc_set DO
+        
+          # Assign unique labels to each vertex
+          Start = SELECT s FROM All:s WHERE s.cc_id == ccid ACCUM s.@label = getvid(s);
+
+          # Propagate labels to neighbors until labels converge or the max iterations is reached
+          WHILE @@changed == true LIMIT maxIter DO
+        
+               FOREACH i in range[0,k-1] DO
+        
+                  tmp = SELECT s FROM Start:s WHERE getvid(s)&k == i POST-ACCUM s.@is_start = true;
+                
+                  sender = SELECT t FROM tmp-(Coworker:e)-:t;
+        
+                  @@changed = false;
+                  Start = SELECT s 
+                          FROM sender:s -(Coworker:e)-> :t
+                          ACCUM t.@map += (s.@label -> 1)
+                          POST-ACCUM
+                            CASE WHEN t.@is_start == true THEN
+                                INT maxV = 0,
+                                INT label = 0,
+                                # Iterate over the map to get the neighbor label that occurs most often
+                                FOREACH (k,v) IN t.@map DO
+                                        CASE WHEN v > maxV THEN
+                                                maxV = v,
+                                                label = k
+                                        END
+                                END,
+                                # When the neighbor search finds a label AND it is a new label
+                                # AND the label's count has increased, update the label.
+                                CASE WHEN label != 0 AND t.@label != label AND maxV > t.@num THEN
+                                        @@changed += true,
+                                        t.@label_new = label,
+                                        t.@num = maxV
+                                END,
+                            END,
+                            t.@map.clear();
+               DO;
+               tmp = SELECT s FROM Start:s WHERE s.@label = s.@lable_new;
+        END; // end WHILE
+      END; // end FOREACH
+}
+
+#INSTALL QUERY label_prop
