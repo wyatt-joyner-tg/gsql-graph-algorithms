@@ -1,4 +1,4 @@
-CREATE QUERY label_prop_split (INT maxIter, int k) FOR GRAPH social {
+CREATE QUERY label_prop_split (INT maxIter, int k, int hub) FOR GRAPH social {
 # Partition the vertices into communities, according to the Label Propagation method.
 # Indicate community membership by assigning each vertex a community ID.
 
@@ -21,9 +21,12 @@ CREATE QUERY label_prop_split (INT maxIter, int k) FOR GRAPH social {
         
                FOREACH i in range[0,k-1] DO
         
-                  tmp = SELECT s FROM Start:s WHERE getvid(s)&k == i POST-ACCUM s.@is_start = true;
+                  tmp = SELECT s FROM Start:s 
+                        WHERE getvid(s)&k == i 
+                        POST-ACCUM s.@is_start = true;
                 
-                  sender = SELECT t FROM tmp-(Coworker:e)-:t;
+                  sender = SELECT t FROM tmp-(Coworker:e)-:t
+                           HAVING t.@outdegree() < hub;
         
                   @@changed = false;
                   Start = SELECT s 
