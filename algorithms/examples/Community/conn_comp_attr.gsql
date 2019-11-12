@@ -1,51 +1,44 @@
-*ATTR*CREATE DISTRIBUTED QUERY conn_comp*EXT* () FOR GRAPH social {
-*ACCM*CREATE DISTRIBUTED QUERY conn_comp*EXT* () FOR GRAPH social {
-*FILE*CREATE DISTRIBUTED QUERY conn_comp*EXT* (FILE f) FOR GRAPH social {
-# This query identifies the Connected Components (undirected edges)
-
-        MinAccum<int> @cc_id = 0;       //each vertex's tentative component id
-        SumAccum<int> @old_id = 0;
-        OrAccum<bool> @active;
-        MapAccum<int, int> @@compSizes;
+CREATE QUERY conn_comp_attr (INT split = 1) FOR GRAPH social {
+/* This query identifies the Connected Components (undirected edges)
+   "split" is the number of splits of graph used for memory saving. 
+   The larger the split, the less memory usage at the cost of longer running time. 
+*/
+ 
+        MinAccum<INT> @cid = 0, @old_cid;       //each vertex's tentative component id
+        MapAccum<INT, INT> @@compSizes;
   
-        Start = {ANY};
+        all = {Person.*};
 
 # Initialize: Label each vertex with its own internal ID
-        S = SELECT x 
-            FROM Start:x
-            POST-ACCUM x.@cc_id = getvid(x),
-                       x.@old_id = getvid(x)        
-            ;
+        start = SELECT x 
+                FROM all:x
+                POST-ACCUM x.@cid = getvid(x),
+                           x.@old_cid = getvid(x)
+                          ;
 
 # Propagate smaller internal IDs until no more ID changes can be DOne
-        WHILE (Start.size()>0) DO
-                Start = SELECT t
-                        FROM Start:s -(:e)-> :t
-                        ACCUM t.@cc_id += s.@cc_id // If s has a smaller id than t, copy the id to t
-                        POST-ACCUM
-                                CASE WHEN t.@old_id != t.@cc_id THEN // If t's id has changed
-                                        t.@old_id = t.@cc_id,
-                                        t.@active = true
-                                ELSE 
-                                        t.@active = false
-                                END
-                        HAVING t.@active == true
-                        ;
+        WHILE (start.size()>0) DO
+                FOREACH i IN RANGE[0, split-1] DO 
+                        sub_start = SELECT s
+                                    FROM start:s
+                                    WHERE getvid(s)%split == i;
+                        sub_start = SELECT t
+                                    FROM sub_start:s -((Coworker):e)-> :t
+                                    ACCUM t.@cid += s.@old_cid // If s has a smaller id than t, copy the id to t
+                                          ;
+                END;
+                start = SELECT s 
+                        FROM all:s
+                        WHERE s.@old_cid != s.@cid
+                        POST-ACCUM s.@old_cid = s.@cid;
         END;
 
-        Start = {ANY};
 
-*ATTR*  Start = SELECT s FROM Start:s
-*ATTR*          POST-ACCUM s.*vIntAttr* = s.@cc_id;
+        all = SELECT s FROM all:s
+              POST-ACCUM @@compSizes += (s.@cid -> 1);
+        PRINT @@compSizes;
+        all = SELECT s FROM all:s
+              POST-ACCUM s.score = s.@cid;
 
-*ACCM*  Start = SELECT s FROM Start:s
-*ACCM*          POST-ACCUM @@compSizes += (s.@cc_id -> 1);
-*ACCM*  PRINT @@compSizes;
-*ACCM*  PRINT Start.@cc_id;
-
-*FILE*  f.println("Vertex_ID","Component_ID");
-*FILE*  Start = SELECT s FROM Start:s
-*FILE*        	POST-ACCUM f.println(s, s.@cc_id);
 }
 
-#INSTALL QUERY conn_comp*EXT*

@@ -1,44 +1,43 @@
-CREATE DISTRIBUTED QUERY conn_comp () FOR GRAPH social {
-# This query identifies the Connected Components (undirected edges)
-
-        MinAccum<int> @cc_id = 0;       //each vertex's tentative component id
-        SumAccum<int> @old_id = 0;
-        OrAccum<bool> @active;
-        MapAccum<int, int> @@compSizes;
+CREATE QUERY conn_comp (INT split = 1) FOR GRAPH social {
+/* This query identifies the Connected Components (undirected edges)
+   "split" is the number of splits of graph used for memory saving. 
+   The larger the split, the less memory usage at the cost of longer running time. 
+*/
+ 
+        MinAccum<INT> @cid = 0, @old_cid;       //each vertex's tentative component id
+        MapAccum<INT, INT> @@compSizes;
   
-        Start = {ANY};
+        all = {Person.*};
 
 # Initialize: Label each vertex with its own internal ID
-        S = SELECT x 
-            FROM Start:x
-            POST-ACCUM x.@cc_id = getvid(x),
-                       x.@old_id = getvid(x)        
-            ;
+        start = SELECT x 
+                FROM all:x
+                POST-ACCUM x.@cid = getvid(x),
+                           x.@old_cid = getvid(x)
+                          ;
 
 # Propagate smaller internal IDs until no more ID changes can be DOne
-        WHILE (Start.size()>0) DO
-                Start = SELECT t
-                        FROM Start:s -(:e)-> :t
-                        ACCUM t.@cc_id += s.@cc_id // If s has a smaller id than t, copy the id to t
-                        POST-ACCUM
-                                CASE WHEN t.@old_id != t.@cc_id THEN // If t's id has changed
-                                        t.@old_id = t.@cc_id,
-                                        t.@active = true
-                                ELSE 
-                                        t.@active = false
-                                END
-                        HAVING t.@active == true
-                        ;
+        WHILE (start.size()>0) DO
+                FOREACH i IN RANGE[0, split-1] DO 
+                        sub_start = SELECT s
+                                    FROM start:s
+                                    WHERE getvid(s)%split == i;
+                        sub_start = SELECT t
+                                    FROM sub_start:s -((Coworker):e)-> :t
+                                    ACCUM t.@cid += s.@old_cid // If s has a smaller id than t, copy the id to t
+                                          ;
+                END;
+                start = SELECT s 
+                        FROM all:s
+                        WHERE s.@old_cid != s.@cid
+                        POST-ACCUM s.@old_cid = s.@cid;
         END;
 
-        Start = {ANY};
 
-
-        Start = SELECT s FROM Start:s
-                POST-ACCUM @@compSizes += (s.@cc_id -> 1);
+        all = SELECT s FROM all:s
+              POST-ACCUM @@compSizes += (s.@cid -> 1);
         PRINT @@compSizes;
-        PRINT Start.@cc_id;
+        PRINT all.@cid;
 
 }
 
-#INSTALL QUERY conn_comp
