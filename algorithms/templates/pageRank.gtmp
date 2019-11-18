@@ -1,6 +1,6 @@
-*ATTR*CREATE QUERY pageRank*EXT* (FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, BOOL display = FALSE, INT output_limit = 100, INT split=1) FOR GRAPH *graph*{
+*ATTR*CREATE QUERY pageRank*EXT* (FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, INT split=1) FOR GRAPH *graph*{
 *ACCM*CREATE QUERY pageRank*EXT* (FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, BOOL display = FALSE, INT output_limit = 100, INT split=1) FOR GRAPH *graph*{
-*FILE*CREATE QUERY pageRank*EXT* (FILE f, FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, BOOL display = FALSE, INT output_limit = 100, INT split=1) FOR GRAPH *graph*{
+*FILE*CREATE QUERY pageRank*EXT* (FILE f, FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, INT split=1) FOR GRAPH *graph*{
 # Compute the pageRank score for each vertex in the GRAPH
 # In each iteration, compute a score for each vertex:
 #   score = (1-damping) + damping*sum(received scores FROM its neighbors).
