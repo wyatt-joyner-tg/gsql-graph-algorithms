@@ -1,15 +1,13 @@
-*ATTR*CREATE QUERY pageRank*EXT* (FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, BOOL display = FALSE, INT output_limit = 100, INT split=1) FOR GRAPH *graph*{
+*ATTR*CREATE QUERY pageRank*EXT* (FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, INT split=1) FOR GRAPH *graph*{
 *ACCM*CREATE QUERY pageRank*EXT* (FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, BOOL display = FALSE, INT output_limit = 100, INT split=1) FOR GRAPH *graph*{
-*FILE*CREATE QUERY pageRank*EXT* (FILE f, FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, BOOL display = FALSE, INT output_limit = 100, INT split=1) FOR GRAPH *graph*{
+*FILE*CREATE QUERY pageRank*EXT* (FILE f, FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, INT split=1) FOR GRAPH *graph*{
 # Compute the pageRank score for each vertex in the GRAPH
 # In each iteration, compute a score for each vertex:
 #   score = (1-damping) + damping*sum(received scores FROM its neighbors).
 # The pageRank algorithm stops when either of the following is true:
-#  a) it reaches maxIter iterations;
-#  b) the max score change for any vertex compared to the last iteration <= maxChange.
+#  a) it reaches max_iter iterations;
+#  b) the max score change for any vertex compared to the last iteration <= max_change.
 
-*ACCM*  TYPEDEF TUPLE<vertex Vertex_ID, FLOAT score> vertex_score;
-*ACCM*  HeapAccum<vertex_score>(output_limit, score DESC) @@top_scores;
         MaxAccum<float> @@max_diff = 9999; # max score change in an iteration
         SumAccum<float> @received_score = 0; # sum of scores each vertex receives FROM neighbors
         SumAccum<float> @score = 1;   # Initial score for every vertex is 1.
@@ -33,19 +31,15 @@
                          @@max_diff += abs(s.@score - s.@score');
         END;
 
-*ATTR*  V = SELECT s FROM all:s
+*ATTR*  all = SELECT s FROM all:s
 *ATTR*      POST-ACCUM s.*vFltAttr* = s.@score;
 
 *ACCM*  IF output_limit > 0 THEN
-*ACCM*          V = SELECT s FROM all:s
-*ACCM*              POST-ACCUM @@top_scores += vertex_score(s, s.@score);
-*ACCM*          PRINT @@top_scores;
+*ACCM*          top_scores = SELECT s FROM all:s
+*ACCM*                       ORDER BY s.@score DESC
+*ACCM*                       LIMIT output_limit;
+*ACCM*          PRINT top_scores;
 *ACCM*  END;
-
-*FILE*  f.println("Vertex_ID", "PageRank");
-*FILE*  V = SELECT s FROM all:s
-*FILE*      POST-ACCUM f.println(s, s.@score);
-
 *ACCM*  IF display THEN
 *ACCM*          PRINT all[all.@score];
 *ACCM*          all = SELECT s
@@ -53,6 +47,10 @@
 *ACCM*                  ACCUM @@edge_set += e;
 *ACCM*          PRINT @@edge_set;
 *ACCM*  END;
+
+*FILE*  f.println("Vertex_ID", "PageRank");
+*FILE*  all = SELECT s FROM all:s
+*FILE*      POST-ACCUM f.println(s, s.@score);
 }
 
 #INSTALL QUERY pageRank*EXT*
