@@ -1,6 +1,6 @@
-*ACCM*CREATE QUERY label_prop*EXT* (INT maxIter, INT split = 1) FOR GRAPH *graph* {
-*ATTR*CREATE QUERY label_prop*EXT* (INT maxIter, INT split = 1) FOR GRAPH *graph* {
-*FILE*CREATE QUERY label_prop*EXT* (FILE f, INT maxIter, INT split = 1) FOR GRAPH *graph* {
+*ACCM*CREATE QUERY label_prop*EXT* (INT iter, INT split = 1) FOR GRAPH *graph* {
+*ATTR*CREATE QUERY label_prop*EXT* (INT iter, INT split = 1) FOR GRAPH *graph* {
+*FILE*CREATE QUERY label_prop*EXT* (FILE f, INT iter, INT split = 1) FOR GRAPH *graph* {
 # Partition the vertices into communities, according to the Label Propagation method.
 # Indicate community membership by assigning each vertex a community ID.
 
