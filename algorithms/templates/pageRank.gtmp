@@ -22,7 +22,7 @@
                                  WHERE getvid(s) % split == i;
                         tmp = SELECT s
                               FROM subset:s -(*edge-types*:e)-> :t
-                              ACCUM t.@received_score += s.@score/(s.outdegree("Friend")); 
+                              ACCUM t.@received_score += s.@score/(s.outdegree(*edge-types*)); 
                 END;
         all = SELECT s
               FROM all:s
