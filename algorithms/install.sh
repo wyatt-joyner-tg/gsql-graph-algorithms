@@ -237,8 +237,9 @@ while [ !$finished ]; do
 
 	#if [[ $egs = *","* ]]; then
 		egs=${egs//,/|}
+        if [[ $egs != "" ]]; then
 		egs="(${egs})"
-	#fi
+	fi
 	sed -i "s/\*edge-types\*/$egs/g" ${genPath}/${algoName}_tmp.gsql
 
 	# 4.2 Ask for reverse edge type for similarity algos. 
