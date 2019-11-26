@@ -8,9 +8,9 @@
 #  a) it reaches max_iter iterations;
 #  b) the max score change for any vertex compared to the last iteration <= max_change.
 
-        MaxAccum<float> @@max_diff = 9999; # max score change in an iteration
-        SumAccum<float> @received_score = 0; # sum of scores each vertex receives FROM neighbors
-        SumAccum<float> @score = 1;   # Initial score for every vertex is 1.
+        MaxAccum<FLOAT> @@max_diff = 9999; # max score change in an iteration
+        SumAccum<FLOAT> @received_score = 0; # sum of scores each vertex receives FROM neighbors
+        SumAccum<FLOAT> @score = 1;   # Initial score for every vertex is 1.
 *ACCM*  SetAccum<EDGE> @@edge_set;                   # list of all edges, if display is needed
 
         all = {*vertex-types*};   #  all with all vertices of specified type(s)
@@ -22,7 +22,7 @@
                                  WHERE getvid(s) % split == i;
                         tmp = SELECT s
                               FROM subset:s -(*edge-types*:e)-> :t
-                              ACCUM t.@received_score += s.@score/(s.outdegree(*edge-types*)); 
+                              ACCUM t.@received_score += s.@score/(*s_outdegrees*); 
                 END;
         all = SELECT s
               FROM all:s
@@ -31,8 +31,9 @@
                          @@max_diff += abs(s.@score - s.@score');
         END;
 
+
 *ATTR*  all = SELECT s FROM all:s
-*ATTR*      POST-ACCUM s.*vFltAttr* = s.@score;
+*ATTR*        POST-ACCUM s.*vFltAttr* = s.@score;
 
 *ACCM*  IF output_limit > 0 THEN
 *ACCM*          top_scores = SELECT s FROM all:s
@@ -52,5 +53,3 @@
 *FILE*  all = SELECT s FROM all:s
 *FILE*      POST-ACCUM f.println(s, s.@score);
 }
-
-#INSTALL QUERY pageRank*EXT*

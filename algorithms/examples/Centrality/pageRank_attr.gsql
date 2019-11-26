@@ -1,31 +1,36 @@
-CREATE QUERY pageRank_attr (FLOAT maxChange, INT maxIter, FLOAT damping) FOR GRAPH social{
+CREATE QUERY pageRank_attr (FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, INT split=1) FOR GRAPH social{
 # Compute the pageRank score for each vertex in the GRAPH
 # In each iteration, compute a score for each vertex:
 #   score = (1-damping) + damping*sum(received scores FROM its neighbors).
 # The pageRank algorithm stops when either of the following is true:
-#  a) it reaches maxIter iterations;
-#  b) the max score change for any vertex compared to the last iteration <= maxChange.
+#  a) it reaches max_iter iterations;
+#  b) the max score change for any vertex compared to the last iteration <= max_change.
 
-        MaxAccum<float> @@maxDiff = 9999; # max score change in an iteration
-        SumAccum<float> @received_score = 0; # sum of scores each vertex receives FROM neighbors
-        SumAccum<float> @score = 1;   # Initial score for every vertex is 1.
+        MaxAccum<FLOAT> @@max_diff = 9999; # max score change in an iteration
+        SumAccum<FLOAT> @received_score = 0; # sum of scores each vertex receives FROM neighbors
+        SumAccum<FLOAT> @score = 1;   # Initial score for every vertex is 1.
 
-        Start = {ANY};   #  Start with all vertices of specified type(s)
-        WHILE @@maxDiff > maxChange LIMIT maxIter DO
-                @@maxDiff = 0;
-                V = SELECT s
-                    FROM Start:s -(Friend:e)-> :t
-                    ACCUM t.@received_score += s.@score/(s.outdegree("Friend")) 
-                    POST-ACCUM s.@score = (1.0-damping) + damping * s.@received_score,
-                               s.@received_score = 0,
-                               @@maxDiff += abs(s.@score - s.@score');
-        END; # END WHILE loop
+        all = {Person.*};   #  all with all vertices of specified type(s)
+        WHILE @@max_diff > max_change LIMIT iter DO
+                @@max_diff = 0;
+                FOREACH i IN RANGE[0, split-1] DO 
+                        subset = SELECT s
+                                 FROM all:s
+                                 WHERE getvid(s) % split == i;
+                        tmp = SELECT s
+                              FROM subset:s -((Friend):e)-> :t
+                              ACCUM t.@received_score += s.@score/(s.outdegree("Friend")); 
+                END;
+        all = SELECT s
+              FROM all:s
+              POST-ACCUM s.@score = (1.0-damping) + damping * s.@received_score,
+                         s.@received_score = 0,
+                         @@max_diff += abs(s.@score - s.@score');
+        END;
 
-        V = SELECT s FROM Start:s
-            POST-ACCUM s.score = s.@score;
 
+        all = SELECT s FROM all:s
+              POST-ACCUM s.score = s.@score;
 
 
 }
-
-#INSTALL QUERY pageRank_attr

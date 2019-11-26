@@ -1,31 +1,40 @@
-CREATE QUERY pageRank_pers_attr (SET<VERTEX> source, FLOAT maxChange, INT maxIter, FLOAT damping) FOR GRAPH social{
-# Compute the pageRank score for each vertex in the GRAPH, given a set of source vertices
+CREATE QUERY pageRank_pers_attr (Set<Vertex> source, FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, INT split=1) FOR GRAPH social{
+# Compute the pageRank score for each vertex in the graph, given a set of source vertices
 # In each iteration, compute a score for activated vertices if they are source vertices:
-#   score = (1-damping) + damping*sum(received scores FROM its neighbors).
-# If they are not source vertices, then score = damping*sum(received scores FROM its neighbors).
+#   score = (1-damping) + damping*sum(received scores from its neighbors).
+# If they are not source vertices, then score = damping*sum(received scores from its neighbors).
 # The personalized pageRank algorithm stops when either of the following is true:
-#  a) it reaches maxIter iterations;
-#  b) the max score change for any vertex compared to the last iteration <= maxChange.
+#  a) it reaches iter iterations;
+#  b) the max score change for any vertex compared to the last iteration <= max_change.
 
-        MaxAccum<float> @@maxDiff = 9999; # max score change in an iteration
-        SumAccum<float> @received_score = 0; # sum of scores each vertex receives FROM neighbors
-        SumAccum<float> @score = 0;   # Initial score for every vertex is 0.
+        MaxAccum<FLOAT> @@max_diff = 9999; # max score change in an iteration
+        SumAccum<FLOAT> @received_score = 0; # sum of scores each vertex receives FROM neighbors
+        SumAccum<FLOAT> @score = 0;   # Initial score for every vertex is 0.
         OrAccum @is_source;   
-       
-        Start = {source};   #  Start with a set of vertices
-        Start = SELECT s
-                FROM  Start:s
+      
+        all = {Person.*};   #  all with all vertices of specified type(s) 
+        start = {source};   #  Start with a set of vertices
+        start = SELECT s
+                FROM  start:s
                 ACCUM s.@score = 1,   # Only set score of source vertices to 1
                       s.@is_source = true;
-        Total = Start;
-        WHILE @@maxDiff > maxChange LIMIT maxIter DO
-              @@maxDiff = 0;
-              V_tmp = SELECT t      # Only update score for activated vertices
-                      FROM Start:s -(Friend:e)-> :t
-                      ACCUM t.@received_score += s.@score/(s.outdegree("Friend"));
-              T = Start UNION V_tmp;
-              Start = SELECT s
-                      FROM T:s
+
+        WHILE @@max_diff > max_change LIMIT iter DO
+              @@max_diff = 0;
+              FOREACH i IN RANGE[0, split-1] DO
+                        targets = {}; 
+                        subset = SELECT s
+                                 FROM start:s
+                                 WHERE getvid(s) % split == i;
+                        tmp = SELECT t    # Only update score for activated vertices
+                              FROM subset:s -((Friend):e)-> :t
+                              ACCUM t.@received_score += s.@score/(s.outdegree("Friend"));
+                        targets = targets UNION tmp;
+              END;
+
+              start = start UNION targets;
+              start = SELECT s
+                      FROM start:s
                       POST-ACCUM
                           # For source vertices, if it's activated, then add damping; if not activated, do not need to update
                           IF s.@is_source == true
@@ -33,11 +42,13 @@ CREATE QUERY pageRank_pers_attr (SET<VERTEX> source, FLOAT maxChange, INT maxIte
                           ELSE s.@score = damping * s.@received_score
                           END,
                           s.@received_score = 0,
-                          @@maxDiff += abs(s.@score - s.@score');
-              Total = Total UNION T; 
+                          @@max_diff += abs(s.@score - s.@score');
         END; # END WHILE loop
 
-        Total = SELECT s FROM Total:s
-                POST-ACCUM s.score = s.@score;
+
+        V = SELECT s FROM all:s
+            POST-ACCUM s.score = s.@score;
+
+
 
 }

@@ -1,36 +1,40 @@
-CREATE QUERY pageRank_wt_attr (FLOAT maxChange, INT maxIter, FLOAT damping) FOR GRAPH PageRank{
-# Compute the pageRank score for each vertex in the GRAPH
+CREATE QUERY pageRank_wt_attr (FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, INT split=1) FOR GRAPH social{
+# Compute the pageRank score for each vertex in the GRAPH, using weighted edge.
 # In each iteration, compute a score for each vertex:
 #   score = (1-damping) + damping*sum(received scores FROM its neighbors).
 # The pageRank algorithm stops when either of the following is true:
 #  a) it reaches maxIter iterations;
 #  b) the max score change for any vertex compared to the last iteration <= maxChange.
 
-        MaxAccum<float> @@maxDiff = 9999; # max score change in an iteration
-        SumAccum<float> @received_score = 0; # sum of scores each vertex receives FROM neighbors
-        SumAccum<float> @score = 1;   # Initial score for every vertex is 1.
-        SumAccum<float> @total_weight;
+        MaxAccum<FLOAT> @@max_diff = 9999; # max score change in an iteration
+        SumAccum<FLOAT> @received_score = 0; # sum of scores each vertex receives FROM neighbors
+        SumAccum<FLOAT> @score = 1;   # Initial score for every vertex is 1.
+        SumAccum<FLOAT> @total_weight;
 
-        Start = {Person.*};   #  Start with all vertices of specified type(s)
-        Start = SELECT s
-                FROM Start:s -(Friend:e) -> :t
-                ACCUM s.@total_weight += e.weight;
+        all = {Person.*};   #  Start with all vertices of specified type(s)
+        tmp = SELECT s
+              FROM all:s -((Friend):e) -> :t
+              ACCUM s.@total_weight += e.weight;  # Calculate the total weight for each vertex
+             
+        WHILE @@max_diff > max_change LIMIT iter DO
+                @@max_diff = 0;
+                FOREACH i IN RANGE[0, split-1] DO 
+                        subset = SELECT s
+                                 FROM all:s
+                                 WHERE getvid(s) % split == i;
+                        tmp = SELECT s
+                              FROM subset:s -((Friend):e)-> :t
+                              ACCUM t.@received_score += s.@score * e.weight / s.@total_weight; 
+                END;
+                all = SELECT s
+                      FROM all:s
+                      POST-ACCUM s.@score = (1.0-damping) + damping * s.@received_score,
+                                 s.@received_score = 0,
+                                 @@max_diff += abs(s.@score - s.@score');
+        END;
 
-        WHILE @@maxDiff > maxChange LIMIT maxIter DO
-                @@maxDiff = 0;
-                V = SELECT s
-                    FROM Start:s -(Friend:e)-> :t
-                    ACCUM t.@received_score += s.@score * e.weight / s.@total_weight  # e.weight is the edge attribute which stores weight 
-                    POST-ACCUM s.@score = (1.0-damping) + damping * s.@received_score,
-                               s.@received_score = 0,
-                               @@maxDiff += abs(s.@score - s.@score');
-        END; 
-
-        V = SELECT s FROM Start:s
+        all = SELECT s FROM all:s
             POST-ACCUM s.score = s.@score;
 
 
-
 }
-
-#INSTALL QUERY pageRank_attr

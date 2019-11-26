@@ -8,12 +8,10 @@
 #  a) it reaches maxIter iterations;
 #  b) the max score change for any vertex compared to the last iteration <= maxChange.
 
-*ACCM*  TYPEDEF TUPLE<VERTEX Vertex_ID, FLOAT score> vertexScore;
-*ACCM*  HeapAccum<vertexScore>(outputLimit, score DESC) @@topScores;
-        MaxAccum<FLOAT> @@maxDiff = 9999; # max score change in an iteration
+        MaxAccum<FLOAT> @@max_diff = 9999; # max score change in an iteration
         SumAccum<FLOAT> @received_score = 0; # sum of scores each vertex receives FROM neighbors
         SumAccum<FLOAT> @score = 1;   # Initial score for every vertex is 1.
-*ACCM*  SetAccum<EDGE> @@edgeSet;                   # list of all edges, if display is needed
+*ACCM*  SetAccum<EDGE> @@edge_set;                   # list of all edges, if display is needed
         SumAccum<FLOAT> @total_weight;
 
         all = {*vertex-types*};   #  Start with all vertices of specified type(s)
@@ -38,19 +36,15 @@
                                  @@max_diff += abs(s.@score - s.@score');
         END;
 
-*ATTR*  V = SELECT s FROM Start:s
+*ATTR*  all = SELECT s FROM all:s
 *ATTR*      POST-ACCUM s.*vFltAttr* = s.@score;
 
-*ACCM*  IF outputLimit > 0 THEN
-*ACCM*          V = SELECT s FROM all:s
-*ACCM*              POST-ACCUM @@topScores += vertexScore(s, s.@score);
-*ACCM*          PRINT @@topScores;
+*ACCM*  IF output_limit > 0 THEN
+*ACCM*          top_scores = SELECT s FROM all:s
+*ACCM*                       ORDER BY s.@score DESC
+*ACCM*                       LIMIT output_limit;
+*ACCM*          PRINT top_scores;
 *ACCM*  END;
-
-*FILE*  f.println("Vertex_ID", "PageRank");
-*FILE*  V = SELECT s FROM all:s
-*FILE*      POST-ACCUM f.println(s, s.@score);
-
 *ACCM*  IF display THEN
 *ACCM*          PRINT all[all.@score];
 *ACCM*          all = SELECT s
@@ -58,6 +52,8 @@
 *ACCM*                  ACCUM @@edge_set += e;
 *ACCM*          PRINT @@edge_set;
 *ACCM*  END;
-}
 
-#INSTALL QUERY pageRank*EXT*
+*FILE*  f.println("Vertex_ID", "PageRank");
+*FILE*  all = SELECT s FROM all:s
+*FILE*      POST-ACCUM f.println(s, s.@score);
+}

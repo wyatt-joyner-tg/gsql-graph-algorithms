@@ -1,6 +1,6 @@
 *ATTR*CREATE QUERY pageRank_pers*EXT* (Set<Vertex> source, FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, INT split=1) FOR GRAPH *graph*{
 *ACCM*CREATE QUERY pageRank_pers*EXT* (Set<Vertex> source, FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, BOOL display = FALSE, INT output_limit = 100, INT split=1) FOR GRAPH *graph*{
-*FILE*CREATE QUERY pageRank_pers*EXT* (Set<Vertex> source, FILE f, FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, INT split=1) FOR GRAPH *graph*f{
+*FILE*CREATE QUERY pageRank_pers*EXT* (Set<Vertex> source, FILE f, FLOAT max_change = 0.001, INT iter = 50, FLOAT damping = 0.85, INT split=1) FOR GRAPH *graph*{
 # Compute the pageRank score for each vertex in the graph, given a set of source vertices
 # In each iteration, compute a score for activated vertices if they are source vertices:
 #   score = (1-damping) + damping*sum(received scores from its neighbors).
@@ -9,14 +9,13 @@
 #  a) it reaches iter iterations;
 #  b) the max score change for any vertex compared to the last iteration <= max_change.
 
-        TYPEDEF TUPLE<vertex Vertex_ID, FLOAT score> vertex_score;
-        HeapAccum<vertex_score>(output_limit, score DESC) @@top_scores;
         MaxAccum<FLOAT> @@max_diff = 9999; # max score change in an iteration
         SumAccum<FLOAT> @received_score = 0; # sum of scores each vertex receives FROM neighbors
         SumAccum<FLOAT> @score = 0;   # Initial score for every vertex is 0.
-        SetAccum<EDGE> @@edge_set;                   # list of all edges, if display is needed
+*ACCM*  SetAccum<EDGE> @@edge_set;                   # list of all edges, if display is needed
         OrAccum @is_source;   
-       
+      
+        all = {*vertex-types*};   #  all with all vertices of specified type(s) 
         start = {source};   #  Start with a set of vertices
         start = SELECT s
                 FROM  start:s
@@ -32,7 +31,7 @@
                                  WHERE getvid(s) % split == i;
                         tmp = SELECT t    # Only update score for activated vertices
                               FROM subset:s -(*edge-types*:e)-> :t
-                              ACCUM t.@received_score += s.@score/(s.outdegree("Friend"));
+                              ACCUM t.@received_score += s.@score/(*s_outdegrees*);
                         targets = targets UNION tmp;
               END;
 
