@@ -47,12 +47,11 @@ CREATE QUERY bc_subquery (VERTEX source, INT maxHops) FOR GRAPH social RETURNS(M
 
  }
 
-CREATE QUERY betweenness_cent () FOR GRAPH social {
+CREATE QUERY betweenness_cent (INT maxHops) FOR GRAPH social {
 # Betweenness Centrality main query
 
 	MapAccum<VERTEX,SumAccum<float>> @@BC;
   
-        INT maxHops = 10;      # measure distance for vertices up to 10 hops away
   
         Start = {ANY};
         
