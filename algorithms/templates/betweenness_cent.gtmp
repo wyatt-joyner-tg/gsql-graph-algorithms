@@ -3,7 +3,7 @@
 *FILE**SUB* CREATE QUERY bc_subquery*EXT* (VERTEX source, INT maxHops) FOR GRAPH *graph* RETURNS(MapAccum<vertex, float>) {
 /* The TigerGraph implementation is based on A Faster Algorithm for Betweenness Centrality by Ulrik Brandes, Journal of Mathematical Sociology 25(2):163-177, (2001). According to the algorithm, sigma is the number of shortest paths from source; delta is the pair dependency from source; and dist is the shortest distance from source. The subquery returns a map of (s.id->s.@delta)
 */
-        SumAccum<float> @sigma;              
+	SumAccum<float> @sigma;              
 	SumAccum<float> @delta;              
 	MaxAccum<int> @dist;                 
 	SumAccum<int> @@currDist = 0;
